@@ -217,10 +217,21 @@ describe('buildGithubWorkflow', () => {
     ['.github/workflows/testsprite.yml', '.github/workflows/testsprite.yaml'],
     ['.github/workflows/testsprite.api.yml', '.github/workflows/testsprite-api.yml'],
     ['.github/workflows/testsprite api.yml', '.github/workflows/testsprite%20api.yml'],
+    ['.github/workflows/TestSprite.yml', '.github/workflows/testsprite.yml'],
+    ['.github/workflows/A.yml', '.github/workflows/%41.yml'],
+    ['.github/workflows/test:sprite.yml', '.github/workflows/test%3Asprite.yml'],
   ])('keeps distinct filenames independent: %s versus %s', (first, second) => {
-    expect(concurrency(buildGithubWorkflow({ ...WF_BASE, workflowPath: first })).group).not.toBe(
-      concurrency(buildGithubWorkflow({ ...WF_BASE, workflowPath: second })).group,
-    );
+    // GitHub compares concurrency group names case-insensitively.
+    const groupOf = (workflowPath: string) =>
+      concurrency(buildGithubWorkflow({ ...WF_BASE, workflowPath })).group.toLowerCase();
+    expect(groupOf(first)).not.toBe(groupOf(second));
+  });
+
+  it('escapes uppercase letters without altering existing escapes', () => {
+    const group = concurrency(
+      buildGithubWorkflow({ ...WF_BASE, workflowPath: '.github/workflows/Test Sprite:CI.yml' }),
+    ).group;
+    expect(group).toContain('testsprite-%54est%20%53prite%3A%43%49.yml-');
   });
 
   it.each(['pull_request', 'deployment_status'] as const)(

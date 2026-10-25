@@ -281,7 +281,13 @@ export function buildGithubWorkflow(input: {
   // All generated workflows live directly under .github/workflows/. Keep the
   // readable filename, including its extension; escape rather than discard
   // punctuation so distinct filenames cannot collapse to the same slug.
-  const workflowSlug = encodeURIComponent(path.posix.basename(input.workflowPath));
+  // GitHub compares concurrency group names case-insensitively, so uppercase
+  // letters are escaped too (keeping existing %XX escapes intact): otherwise
+  // TestSprite.yml and testsprite.yml would share a group.
+  const workflowSlug = encodeURIComponent(path.posix.basename(input.workflowPath)).replace(
+    /%[0-9A-F]{2}|[A-Z]/g,
+    match => (match.startsWith('%') ? match : `%${match.charCodeAt(0).toString(16).toUpperCase()}`),
+  );
 
   const envLines = [
     `      ${API_KEY_SECRET_NAME}: \${{ secrets.${API_KEY_SECRET_NAME} }}`,
